@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["organizer", "attendee"] },
+        "bio": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Event details and capacity",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "price": { "type": "number" },
+        "totalCapacity": { "type": "integer" },
+        "remainingCapacity": { "type": "integer" },
+        "organizerId": { "type": "string" },
+        "status": { "type": "string", "enum": ["upcoming", "ongoing", "completed", "cancelled"] },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "date", "totalCapacity", "remainingCapacity", "organizerId"]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "Attendee registration for an event",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "attendeeId": { "type": "string" },
+        "purchaseDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["confirmed", "cancelled", "pending_payment"] },
+        "ticketId": { "type": "string" }
+      },
+      "required": ["eventId", "attendeeId", "status"]
+    },
+    "Waitlist": {
+      "title": "Waitlist",
+      "description": "Attendees waiting for a slot in a sold-out event",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "attendeeId": { "type": "string" },
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["waiting", "notified", "expired", "converted"] },
+        "notificationSentAt": { "type": "string", "format": "date-time" },
+        "deadlineAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "attendeeId", "status", "joinedAt"]
+    },
+    "Collaboration": {
+      "title": "Collaboration",
+      "description": "Mapping of users to events with specific roles",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["owner", "marketing", "ticketing", "logistics"] },
+        "assignedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "userId", "role"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Tasks within an event for collaboration",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "role": { "type": "string", "enum": ["marketing", "ticketing", "logistics"] },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "done"] },
+        "deadline": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "title", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/events/{eventId}": {
+      "schema": "Event",
+      "description": "Events collection"
+    },
+    "/events/{eventId}/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Registrations for a specific event"
+    },
+    "/events/{eventId}/waitlist/{waitlistId}": {
+      "schema": "Waitlist",
+      "description": "Waitlist for a specific event"
+    },
+    "/events/{eventId}/collaborators/{collaboratorId}": {
+      "schema": "Collaboration",
+      "description": "Collaborators for a specific event"
+    },
+    "/events/{eventId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Tasks for a specific event"
+    }
+  }
+}

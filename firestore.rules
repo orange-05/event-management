@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    // --- User Rules ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'role']) &&
+               data.uid == request.auth.uid &&
+               data.email is string &&
+               data.role in ['organizer', 'attendee'];
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().updatedAt == request.time &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().uid == existing().uid &&
+                    incoming().email == existing().email;
+    }
+
+    // --- Event Rules ---
+    match /events/{eventId} {
+      function isValidEvent(data) {
+        return data.keys().hasAll(['title', 'date', 'totalCapacity', 'remainingCapacity', 'organizerId']) &&
+               data.title is string && data.title.size() <= 200 &&
+               data.totalCapacity is int && data.totalCapacity >= 0 &&
+               data.remainingCapacity is int && data.remainingCapacity >= 0 &&
+               data.remainingCapacity <= data.totalCapacity &&
+               data.organizerId == request.auth.uid;
+      }
+
+      allow read: if true; // Discovery is public
+      allow create: if isSignedIn() && isEmailVerified() && isValidEvent(incoming()) && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && 
+                    (existing().organizerId == request.auth.uid || 
+                     exists(/databases/$(database)/documents/events/$(eventId)/collaborators/$(request.auth.uid))) &&
+                    isValidEvent(incoming());
+      allow delete: if isSignedIn() && existing().organizerId == request.auth.uid;
+
+      // Sub-collections
+      match /registrations/{regId} {
+        allow read, list: if isSignedIn() && (
+          resource.data.attendeeId == request.auth.uid || 
+          get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid ||
+          exists(/databases/$(database)/documents/events/$(eventId)/collaborators/$(request.auth.uid))
+        );
+        allow create: if isSignedIn() && incoming().attendeeId == request.auth.uid;
+        allow update: if isSignedIn() && (
+          get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid ||
+          exists(/databases/$(database)/documents/events/$(eventId)/collaborators/$(request.auth.uid))
+        ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkedIn', 'checkedInAt']);
+      }
+
+      match /waitlist/{waitId} {
+        allow read: if isSignedIn() && (resource.data.attendeeId == request.auth.uid || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid);
+        allow create: if isSignedIn() && incoming().attendeeId == request.auth.uid;
+      }
+
+      match /collaborators/{collId} {
+        allow read: if isSignedIn() && (request.auth.uid == collId || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid);
+        allow write: if isSignedIn() && get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid;
+      }
+
+      match /tasks/{taskId} {
+        allow read: if isSignedIn() && 
+                    (get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid ||
+                     exists(/databases/$(database)/documents/events/$(eventId)/collaborators/$(request.auth.uid)));
+        allow write: if isSignedIn() && 
+                     (get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid ||
+                      exists(/databases/$(database)/documents/events/$(eventId)/collaborators/$(request.auth.uid)));
+      }
+    }
+  }
+}

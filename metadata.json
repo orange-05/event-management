@@ -1,0 +1,11 @@
+{
+  "name": "Aahwanam",
+  "description": "Where Every Invitation Becomes a Celebration. A sophisticated event management platform for visionary hosts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "Firebase Authentication",
+    "Cloud Firestore",
+    "Real-time Updates",
+    "Data Visualization"
+  ]
+}
