@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, ReactNode, FormEvent, Fragment } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation, Navigate, useParams } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Link, useNavigate, useLocation, Navigate, useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
 import { 
   Calendar, 
